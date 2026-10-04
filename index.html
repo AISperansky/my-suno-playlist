@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KIRA VOLT — музыкальное портфолио</title>
+<meta name="description" content="Портфолио музыкального автора: треки, созданные в Suno, сгруппированные по жанрам.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════ БАЗА ═══════════ */
+  :root{
+    --bg:#0b0b0c;
+    --bg2:#121214;
+    --surface:#151517;
+    --line:rgba(255,255,255,.09);
+    --line-strong:rgba(255,255,255,.22);
+    --text:#f4f3ee;
+    --muted:#98978f;
+    --muted2:#5f5f5a;
+    --acid:#d5f527;      /* единственный акцентный цвет */
+    --head-h:58px;
+    /* точный отступ «шапка + навигация жанров», пересчитывается в JS */
+    --sticky-top: calc(var(--head-h) + 56px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:'Manrope',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  ::selection{background:var(--acid);color:#0b0b0c}
+  :focus-visible{outline:2px solid var(--acid);outline-offset:2px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:1200px;margin:0 auto;padding-left:clamp(16px,4vw,48px);padding-right:clamp(16px,4vw,48px)}
+  a{color:inherit}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+  /* ═══════════ ШАПКА ═══════════ */
+  .site-head{
+    position:sticky;top:0;z-index:50;height:var(--head-h);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 clamp(16px,4vw,48px);
+    background:rgba(11,11,12,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid transparent;transition:border-color .3s;
+  }
+  .site-head.scrolled{border-bottom-color:var(--line)}
+  .brand{font-family:'Unbounded';font-weight:700;font-size:1rem;letter-spacing:.02em;text-decoration:none}
+  .brand em{font-style:normal;color:var(--acid)}
+  .head-note{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2)}
+  @media(max-width:560px){.head-note{display:none}}
+
+  /* ═══════════ HERO ═══════════ */
+  .hero{padding-top:clamp(48px,9vh,96px)}
+  .kicker{
+    display:flex;align-items:center;gap:12px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;
+    letter-spacing:.24em;text-transform:uppercase;color:var(--acid);
+  }
+  .kicker::before{content:"";width:36px;height:1px;background:var(--acid)}
+  .hero-title{
+    font-family:'Unbounded';font-weight:900;
+    font-size:clamp(2.6rem,9vw,7.2rem);line-height:.95;letter-spacing:-.02em;
+    margin:20px 0 24px;text-transform:uppercase;
+  }
+  .outline{color:transparent;-webkit-text-stroke:1.5px var(--acid)}
+  @supports not (-webkit-text-stroke:1px black){.outline{color:var(--acid)}}
+  .hero-tag{max-width:58ch;color:var(--muted);font-size:clamp(1rem,1.4vw,1.15rem);line-height:1.65}
+  .hero-meta{margin-top:26px;font-size:12px;letter-spacing:.06em;color:var(--muted)}
+  .demo-badge{display:inline-flex;align-items:center;gap:7px;margin-left:14px;color:var(--muted2)}
+  .demo-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--acid);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.25}}
+
+  /* волна */
+  .wave-zone{margin-top:10px;position:relative;cursor:pointer}
+  #waveCanvas{display:block;width:100%;height:240px}
+  .wave-hint{
+    position:absolute;right:clamp(16px,4vw,48px);bottom:16px;pointer-events:none;
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted2);
+    transition:color .3s;
+  }
+  .wave-zone:hover .wave-hint{color:var(--acid)}
+
+  /* ═══════════ НАВИГАЦИЯ ПО ЖАНРАМ ═══════════ */
+  .genre-nav{
+    position:sticky;top:var(--head-h);z-index:40;
+    background:rgba(11,11,12,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .genre-nav[hidden]{display:none}
+  .genre-nav .inner{display:flex;gap:8px;padding:10px clamp(16px,4vw,48px);overflow-x:auto;scrollbar-width:none}
+  .genre-nav .inner::-webkit-scrollbar{display:none}
+  .chip{
+    flex:none;display:inline-flex;align-items:center;gap:9px;
+    padding:8px 15px;border:1px solid var(--line-strong);border-radius:999px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);transition:border-color .25s,color .25s,background .25s;
+  }
+  .chip .chip-n{color:var(--muted2);transition:color .25s}
+  .chip:hover:not(.active){border-color:var(--text);color:var(--text)}
+  .chip.active{background:var(--acid);border-color:var(--acid);color:#0b0b0c}
+  .chip.active .chip-n{color:rgba(11,11,12,.55)}
+
+  /* ═══════════ СЕКЦИИ ЖАНРОВ ═══════════ */
+  .catalog{padding-top:8px}
+  .genre-sec{margin:72px 0;scroll-margin-top:var(--sticky-top)}
+  .genre-head{
+    /* заголовок жанра прилипает под шапкой и навигацией, пока листаешь его треки */
+    position:-webkit-sticky;position:sticky;
+    top:var(--sticky-top);z-index:5;
+    background:var(--bg);
+    display:flex;flex-wrap:wrap;align-items:baseline;gap:14px 18px;
+    padding:12px 0 16px;border-bottom:1px solid var(--line-strong);
+  }
+  .genre-idx{font-size:13px;color:var(--acid)}
+  .genre-name{
+    font-family:'Unbounded';font-weight:700;text-transform:uppercase;
+    font-size:clamp(1.7rem,4.6vw,3.2rem);line-height:1;letter-spacing:-.01em;
+  }
+  .genre-count{margin-left:auto;font-size:12px;color:var(--muted2);letter-spacing:.06em}
+
+  /* ═══════════ КАРТОЧКИ ═══════════ */
+  .track-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:1px;background:var(--line); /* тонкие линии между карточками */
+  }
+  .card{
+    background:var(--bg);padding:18px 18px 22px;
+    display:flex;flex-direction:column;gap:14px;transition:background .3s;
+  }
+  .card:hover{background:var(--bg2)}
+  .card-meta{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.12em;color:var(--muted2);text-transform:uppercase}
+  .cover{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;background:var(--surface)}
+  .cover img,.cover canvas{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+  .card:hover .cover img{transform:scale(1.045)}
+
+  .card-title{font-family:'Unbounded';font-weight:500;font-size:1.05rem;line-height:1.35}
+  .card-desc{
+    color:var(--muted);font-size:.9rem;line-height:1.55;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .btn-suno{
+    margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:13px 16px;border:1px solid var(--line-strong);
+    font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    text-decoration:none;transition:background .25s,border-color .25s,color .25s;
+  }
+  .btn-suno svg{width:15px;height:15px;flex:none;transition:transform .25s}
+  .btn-suno:hover{background:var(--acid);border-color:var(--acid);color:#0b0b0c}
+  .btn-suno:hover svg{transform:translate(2px,-2px)}
+  .btn-suno:active{transform:translateY(1px)}
+
+  /* широкая featured-карточка (первая в каждом жанре) */
+  .card--wide{grid-column:1/-1;display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:30px;padding:24px}
+  .card--wide .cover{align-self:start}
+  .card--wide .card-body{display:flex;flex-direction:column;gap:14px;justify-content:center}
+  .card--wide .card-title{font-size:clamp(1.4rem,2.6vw,2rem)}
+  .card--wide .card-desc{-webkit-line-clamp:3;max-width:60ch;font-size:.95rem}
+  .card--wide .btn-suno{align-self:flex-start;padding:14px 22px}
+  @media(max-width:640px){
+    .card--wide{grid-template-columns:1fr;gap:16px}
+  }
+
+  /* ═══════════ СОСТОЯНИЯ ЗАГРУЗКИ / ОШИБКИ ═══════════ */
+  .status{display:flex;flex-direction:column;align-items:center;gap:16px;padding:90px 20px;text-align:center}
+  .status[hidden]{display:none}
+  .status-title{font-family:'Unbounded';font-weight:500;font-size:1.15rem}
+  .status-text{font-size:13px;letter-spacing:.05em;color:var(--muted)}
+  .status-hint{color:var(--muted);font-size:.9rem;max-width:46ch}
+  .status-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .btn-line{
+    padding:11px 20px;border:1px solid var(--line-strong);
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    transition:border-color .25s,color .25s,background .25s;
+  }
+  .btn-line:hover{border-color:var(--acid);color:var(--acid)}
+  .btn-line--acid{background:var(--acid);border-color:var(--acid);color:#0b0b0c}
+  .btn-line--acid:hover{background:transparent;color:var(--acid)}
+  .loader{display:flex;gap:5px;align-items:flex-end;height:36px}
+  .loader i{width:4px;height:100%;background:var(--acid);transform-origin:bottom;animation:eq 1s ease-in-out infinite}
+  .loader i:nth-child(2){animation-delay:-.25s}
+  .loader i:nth-child(3){animation-delay:-.5s}
+  .loader i:nth-child(4){animation-delay:-.75s}
+  .loader i:nth-child(5){animation-delay:-.35s}
+  @keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}} /* используется лоадером */
+
+  /* ═══════════ ФУТЕР ═══════════ */
+  .site-foot{
+    display:flex;flex-wrap:wrap;gap:14px 28px;justify-content:space-between;align-items:center;
+    border-top:1px solid var(--line);margin-top:100px;padding-top:26px;padding-bottom:44px;
+    font-size:12px;color:var(--muted2);
+  }
+  .to-top{text-decoration:none;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;transition:color .25s}
+  .to-top:hover{color:var(--acid)}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+
+<header class="site-head" id="siteHead">
+  <a class="brand" href="#top"><span data-cfg="first">KIRA</span> <em data-cfg="last">VOLT</em></a>
+  <p class="head-note">электронная музыка · suno ai</p>
+</header>
+
+<main id="top">
+
+  <!-- ░░ HERO ░░ -->
+  <section class="hero">
+    <div class="wrap">
+      <p class="kicker">Suno portfolio — <span id="kickerYear">2025</span></p>
+      <h1 class="hero-title"><span data-cfg="first">KIRA</span> <span class="outline" data-cfg="last">VOLT</span></h1>
+      <p class="hero-tag" data-cfg="tagline">Пишу синтвейв, дарквейв и эмбиент вместе с нейросетью Suno. Каждый трек здесь прошёл путь от одной строки текста до готовой истории — за одну ночь.</p>
+      <p class="hero-meta mono" id="heroMeta">каталог загружается…</p>
+    </div>
+    <div class="wave-zone" id="waveZone" role="button" tabindex="0" aria-label="Интерактивная звуковая волна: нажми, чтобы услышать звук">
+      <canvas id="waveCanvas"></canvas>
+      <span class="wave-hint mono">нажми на волну — услышишь звук</span>
+    </div>
+  </section>
+
+  <!-- ░░ ЧИПЫ ЖАНРОВ (заполняется из таблицы) ░░ -->
+  <nav class="genre-nav" id="genreNav" aria-label="Жанры" hidden>
+    <div class="inner" id="genreNavInner"></div>
+  </nav>
+
+  <!-- ░░ КАТАЛОГ ░░ -->
+  <section class="catalog wrap" id="catalog">
+    <div class="status" id="status" hidden></div>
+    <div id="tracksRoot"></div>
+  </section>
+
+</main>
+
+<footer class="site-foot wrap">
+  <p class="mono">© <span id="year">2025</span> <span data-cfg="first">KIRA</span> <span data-cfg="last">VOLT</span></p>
+  <p class="mono">данные: google sheets → json</p>
+  <a class="to-top" href="#top">наверх ↑</a>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   ПОДКЛЮЧЕНИЕ GOOGLE ТАБЛИЦЫ — 3 ШАГА
+   ───────────────────────────────────────────────────────────────────
+   1) Оформи таблицу так: ПЕРВАЯ строка — заголовки колонок:
+        Название | Жанр | Ссылка | Обложка | Описание | Длительность
+      · обязательны: «Название», «Жанр», «Ссылка» (Suno-адрес трека);
+      · «Обложка» — прямая ссылка на картинку (напр. cdn.suno.ai/….jpeg
+        или https://picsum.photos/seed/xxx/640/640.jpg);
+      · «Длительность» — текст вида 3:42;
+      · порядок колонок любой, имена можно писать по-русски или
+        по-английски — скрипт сам их распознает.
+      Каждая новая строка = новый трек на сайте.
+
+   2) Открой доступ: кнопка «Настройки доступа» → в поле добавь
+      «Все, у кого есть ссылка» с ролью «Читатель».
+
+   3) Скопируй ID таблицы из её адреса
+        docs.google.com/spreadsheets/d/ ●ВОТ_ЭТОТ_ID● /edit
+      и вставь его в SHEET_ID ниже. Обнови страницу — готово.
+
+   Примечание: если оставить SHEET_ID пустым, сайт покажет демо-набор,
+   чтобы ты сразу видел, как всё выглядит.
+   ═══════════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  SHEET_ID: "",        // ←←← СЮДА ВСТАВЬ ID СВОЕЙ ТАБЛИЦЫ
+  SHEET_NAME: "",      // имя листа-вкладки (напр. "Лист1"); пусто → берётся лист с GID
+  GID: "0",            // gid листа (число в адресной строке открытого листа)
+  ARTIST: {            // твоё имя и описание — подтянутся по всей странице
+    first: "KIRA",
+    last: "VOLT",
+    tagline: "Пишу синтвейв, дарквейв и эмбиент вместе с нейросетью Suno. Каждый трек здесь прошёл путь от одной строки текста до готовой истории — за одну ночь."
+  }
+};
+
+/* ── Демо-данные (видны, пока SHEET_ID пуст) ───────────────────────── */
+const DEMO_TRACKS = [
+  {title:"Неоновый дождь",      genre:"Synthwave", link:"https://suno.com/", cover:"https://picsum.photos/seed/neonrain/640/640.jpg",    description:"Тёплые аналоговые пэды и арпеджио, под которыми хочется ехать по мокрому городу в три часа ночи.", duration:"3:42"},
+  {title:"Полночное шоссе",     genre:"Synthwave", link:"https://suno.com/", cover:"https://picsum.photos/seed/midnightdrive/640/640.jpg", description:"Драйвовый ритм 118 BPM и гулкий бас: саундтрек для пустой трассы и включённых фар.", duration:"4:05"},
+  {title:"Пульс 1984",          genre:"Synthwave", link:"https://suno.com/", cover:"https://picsum.photos/seed/pulse1984/640/640.jpg",     description:"Ода десятилетию, которое я не застал: латунь из дешёвого синтезатора и большой реверб.", duration:"3:18"},
+  {title:"Стеклянный город",    genre:"Synthwave", link:"https://suno.com/", cover:"", description:"Медленная и светлая вещь о городе, который отражает закат тысячами окон. Обложка сгенерирована автоматически — в таблице она просто не указана.", duration:"3:57"},
+  {title:"Тени на стене",       genre:"Darkwave",  link:"https://suno.com/", cover:"https://picsum.photos/seed/darkbloom/640/640.jpg",     description:"Минорные струнные и шёпот барабанов. Самый личный трек альбома.", duration:"4:31"},
+  {title:"Тёмный цветок",       genre:"Darkwave",  link:"https://suno.com/", cover:"https://picsum.photos/seed/darkflower/640/640.jpg",    description:"Тягучий бас и холодный вокал — красота, которой немного страшно.", duration:"3:49"},
+  {title:"Последний поезд",     genre:"Darkwave",  link:"https://suno.com/", cover:"https://picsum.photos/seed/lasttrain/640/640.jpg",     description:"Пять минут о том, как платформа пустеет, а ты всё ещё ждёшь.", duration:"5:02"},
+  {title:"Северный сигнал",     genre:"Ambient",   link:"https://suno.com/", cover:"https://picsum.photos/seed/northsignal/640/640.jpg",   description:"Радиомаяк где-то за фьордом. Шесть минут чистого воздуха.", duration:"6:12"},
+  {title:"Ледяное море",        genre:"Ambient",   link:"https://suno.com/", cover:"", description:"Полевые записи ветра, наложенные на бесконечный дрон.", duration:"7:05"},
+  {title:"Тихий космос",        genre:"Ambient",   link:"https://suno.com/", cover:"https://picsum.photos/seed/quietcosmos/640/640.jpg",   description:"Колыбельная для орбитальной станции.", duration:"5:44"},
+  {title:"Первый снег в Токио", genre:"Lo-Fi",     link:"https://suno.com/", cover:"https://picsum.photos/seed/tokyosnow/640/640.jpg",     description:"Пыльный питч-сдвиг, шум винила и каштаны из соседней кофейни.", duration:"2:58"},
+  {title:"Медленное эхо",       genre:"Lo-Fi",     link:"https://suno.com/", cover:"https://picsum.photos/seed/slowecho/640/640.jpg",      description:"Трек, который специально заканчивается на секунду раньше, чем хочется.", duration:"3:11"}
+];
+
+/* ── Утилиты ───────────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const pad = n => String(n).padStart(2, "0");
+function plural(n, f){ const a=n%10,b=n%100; if(a===1&&b!==11)return f[0]; if(a>=2&&a<=4&&(b<12||b>14))return f[1]; return f[2]; }
+function hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+const ICONS = {
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>'
+};
+
+const state = { demo:false };
+const status = $("status"), tracksRoot = $("tracksRoot"),
+      genreNav = $("genreNav"), genreNavInner = $("genreNavInner"), heroMeta = $("heroMeta");
+
+/* ── Липкие заголовки жанров ─────────────────────────────────────────
+   Отступ = высота шапки + навигации жанров (измеряется в рантайме),
+   используется и для position:sticky заголовка, и для скролла по клику. */
+const stickyOffset = () => $("siteHead").offsetHeight + genreNav.offsetHeight;
+function updateStickyVar(){
+  document.documentElement.style.setProperty("--sticky-top", stickyOffset() + "px");
+}
+
+let scrollLockUntil = 0; // пока активно — автоподсветка чипов молчит (чтобы не мигали при программном скролле)
+
+/* плавный скролл к жанру: название встаёт ровно под шапку и навигацию */
+function scrollToSection(id){
+  const sec = document.getElementById(id);
+  if (!sec) return;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const top = Math.max(0, sec.getBoundingClientRect().top + window.scrollY - stickyOffset());
+  window.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
+  scrollLockUntil = Date.now() + (reduced ? 0 : 1200);
+}
+
+/* ── Подстановка имени автора из CONFIG ────────────────────────────── */
+function applyConfig(){
+  document.querySelectorAll("[data-cfg]").forEach(el=>{
+    const v = CONFIG.ARTIST[el.dataset.cfg];
+    if (v != null) el.textContent = v;
+  });
+  document.title = `${CONFIG.ARTIST.first} ${CONFIG.ARTIST.last} — музыкальное портфолио`;
+  $("year").textContent = $("kickerYear").textContent = new Date().getFullYear();
+}
+
+/* ── Загрузка данных из Google Таблицы (gviz JSON) ─────────────────── */
+async function fetchSheet(){
+  const base = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&headers=1`;
+  const url  = CONFIG.SHEET_NAME
+    ? `${base}&sheet=${encodeURIComponent(CONFIG.SHEET_NAME)}`
+    : `${base}&gid=${encodeURIComponent(CONFIG.GID)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} — проверь ID таблицы и доступ «по ссылке»`);
+  const raw = await res.text();
+  const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+  if (s === -1) throw new Error("Google вернул не JSON — скорее всего, таблица закрыта доступом");
+  const data = JSON.parse(raw.slice(s, e + 1));
+  if (data.status === "error") throw new Error("Таблица найдена, но лист недоступен — проверь SHEET_NAME / GID");
+
+  const cols = data.table.cols.map(c => ((c && c.label) || "").toString().trim());
+  const rows = (data.table.rows || []).map(r => (r.c || []).map(c =>
+    c == null ? "" : (c.f != null ? String(c.f) : (c.v != null ? String(c.v) : ""))));
+
+  return rowsToTracks(cols, rows);
+}
+
+/* сопоставление заголовков таблицы с полями трека (рус/англ) */
+function rowsToTracks(cols, rows){
+  const FIELDS = {
+    title:       ["название","наименование","трек","title","name","song"],
+    genre:       ["жанр","стиль","genre","style","категория","category"],
+    link:        ["ссылка","suno","url","link","адрес","слушать"],
+    cover:       ["обложк","cover","image","картинк","фото","art","постер"],
+    description: ["описан","description","desc","заметка","note","о треке"],
+    duration:    ["длител","duration","время","длина","length","хроном"]
+  };
+  const idx = {};
+  for (const [key, aliases] of Object.entries(FIELDS)){
+    idx[key] = cols.findIndex(h=>{
+      if(!h) return false;
+      const l = h.toLowerCase().replace(/[\s_]/g,"");
+      return aliases.some(a => l === a || l.includes(a));
+    });
+  }
+  if (idx.title < 0)
+    throw new Error("Не нашёл колонку «Название». Проверь заголовки первой строки таблицы");
+
+  const tracks = [];
+  rows.forEach(cells=>{
+    const get = k => (idx[k] >= 0 ? (cells[idx[k]] || "").trim() : "");
+    const t = {
+      title: get("title"), genre: get("genre"), link: get("link"),
+      cover: get("cover"), description: get("description"), duration: get("duration")
+    };
+    if (!t.title) return;                                   // пустые строки пропускаем
+    if (/^(название|title)$/i.test(t.title)) return;        // случайный дубль шапки
+    tracks.push(t);
+  });
+  return tracks;
+}
+
+/* если ссылки нет — ведём на поиск по названию на Suno (кнопка всегда живая) */
+function sunoLink(t){
+  const u = (t.link || "").trim();
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u) return "https://" + u;
+  return "https://suno.com/search?q=" + encodeURIComponent(t.title);
+}
+
+/* ── Рендер ────────────────────────────────────────────────────────── */
+function groupByGenre(tracks){
+  const groups = [];
+  tracks.forEach((t,i)=>{
+    t.no = i + 1; // сквозная нумерация, как в треклисте
+    const name = (t.genre || "").trim() || "Без жанра";
+    let g = groups.find(x => x.name === name);
+    if (!g){ g = { name, items: [] }; groups.push(g); }
+    g.items.push(t);
+  });
+  return groups;
+}
+
+function cardHTML(t, wide){
+  const meta = `<div class="card-meta mono"><span>TRK ${pad(t.no)}</span><span>${esc(t.duration || "Suno")}</span></div>`;
+  const cover = t.cover
+    ? `<img class="cover-img" src="${esc(t.cover)}" alt="Обложка трека «${esc(t.title)}»" loading="lazy" data-seed="${esc(t.title)}">`
+    : `<canvas class="cover-canvas" data-seed="${esc(t.title)}" role="img" aria-label="Сгенерированная обложка трека «${esc(t.title)}»"></canvas>`;
+  const btn = `<a class="btn-suno" href="${esc(sunoLink(t))}" target="_blank" rel="noopener"><span>Слушать на Suno</span>${ICONS.arrow}</a>`;
+  const desc = t.description ? `<p class="card-desc">${esc(t.description)}</p>` : "";
+
+  if (wide){
+    return `<article class="card card--wide">
+      <div class="cover">${cover}</div>
+      <div class="card-body">${meta}<h3 class="card-title">${esc(t.title)}</h3>${desc}${btn}</div>
+    </article>`;
+  }
+  return `<article class="card">${meta}<div class="cover">${cover}</div><h3 class="card-title">${esc(t.title)}</h3>${desc}${btn}</article>`;
+}
+
+function renderAll(tracks){
+  const groups = groupByGenre(tracks);
+
+  heroMeta.innerHTML =
+    `${tracks.length} ${plural(tracks.length,["трек","трека","треков"])} · ` +
+    `${groups.length} ${plural(groups.length,["жанр","жанра","жанров"])}` +
+    (state.demo ? `<span class="demo-badge"><i class="dot"></i>демо-данные — подключи таблицу в CONFIG</span>` : "");
+
+  genreNav.hidden = groups.length < 2;
+  genreNavInner.innerHTML = groups.map((g,i)=>
+    `<button class="chip" data-target="g-${i}"><span>${esc(g.name)}</span><span class="chip-n">${g.items.length}</span></button>`).join("");
+
+  tracksRoot.innerHTML = groups.map((g,i)=>`
+    <section class="genre-sec" id="g-${i}">
+      <div class="genre-head">
+        <span class="genre-idx mono">${pad(i+1)}</span>
+        <h2 class="genre-name">${esc(g.name)}</h2>
+        <span class="genre-count mono">${g.items.length} ${plural(g.items.length,["трек","трека","треков"])}</span>
+      </div>
+      <div class="track-grid">${g.items.map((t,j)=>cardHTML(t, j===0)).join("")}</div>
+    </section>`).join("");
+
+  status.hidden = true;
+  updateStickyVar();   // высота навигации могла измениться → пересчитать отступ липких заголовков
+  hydrate();
+}
+
+/* навешиваем поведение после перерисовки */
+function hydrate(){
+  activeChipId = null;
+  // фолбэк: битая картинка → генерируем волну
+  tracksRoot.querySelectorAll("img.cover-img").forEach(img=>{
+    img.addEventListener("error", ()=>replaceWithWave(img), {once:true});
+    if (img.complete && img.naturalWidth === 0) replaceWithWave(img);
+  });
+  // canvas-обложки для треков без картинки
+  tracksRoot.querySelectorAll("canvas.cover-canvas").forEach(cv=>drawCoverWave(cv, cv.dataset.seed || ""));
+  // чипы жанров
+  genreNavInner.querySelectorAll(".chip").forEach(ch=>{
+    ch.addEventListener("click", ()=>{
+      setActiveChip(ch.dataset.target);
+      scrollToSection(ch.dataset.target);
+    });
+  });
+  updateActiveGenreOnScroll();
+}
+
+/* подсветка активного чипа (без scrollIntoView — чтобы не вмешиваться в скролл страницы) */
+let activeChipId = null;
+function setActiveChip(id){
+  if (id === activeChipId) return;
+  activeChipId = id;
+  genreNavInner.querySelectorAll(".chip").forEach(c=>{
+    const on = c.dataset.target === id;
+    c.classList.toggle("active", on);
+    if (on){
+      const navRect = genreNavInner.getBoundingClientRect();
+      const chipRect = c.getBoundingClientRect();
+      const left = genreNavInner.scrollLeft + (chipRect.left + chipRect.width/2 - navRect.left) - genreNavInner.clientWidth/2;
+      genreNavInner.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+    }
+  });
+}
+
+/* активный жанр = тот, чей заголовок сейчас прилип к верхней части экрана */
+function updateActiveGenreOnScroll(){
+  if (genreNav.hidden) return;
+  const sections = tracksRoot.querySelectorAll(".genre-sec");
+  if (!sections.length) return;
+  if (Date.now() < scrollLockUntil) return;
+
+  const line = stickyOffset() + 2;
+  let activeId = null;
+  sections.forEach(sec=>{ if (sec.getBoundingClientRect().top <= line) activeId = sec.id; });
+  // доскроллили до низа страницы → подсвечиваем последний жанр
+  if (innerHeight + scrollY >= document.documentElement.scrollHeight - 60){
+    activeId = sections[sections.length-1].id;
+  }
+  if (activeId) setActiveChip(activeId);
+}
+
+function replaceWithWave(img){
+  const cv = document.createElement("canvas");
+  cv.className = "cover-canvas";
+  cv.dataset.seed = img.dataset.seed || "";
+  img.replaceWith(cv);
+  drawCoverWave(cv, cv.dataset.seed);
+}
+
+/* ── Состояния: загрузка / ошибка / пусто ──────────────────────────── */
+function renderStatus(type, err){
+  tracksRoot.innerHTML = "";
+  genreNav.hidden = true;                // чипы от прошлой выдачи больше неактуальны
+  genreNavInner.innerHTML = "";
+  updateStickyVar();
+  status.hidden = false;
+  if (type === "loading"){
+    status.innerHTML = `<div class="loader" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="status-text mono">подключаюсь к google sheets…</p>`;
+  } else if (type === "empty"){
+    status.innerHTML = `<p class="status-title">Таблица подключена, но треков не нашлось</p>
+      <p class="status-hint">Заполни строки под заголовками (Название, Жанр, Ссылка) и обнови страницу.</p>`;
+  } else if (type === "error"){
+    status.innerHTML = `<p class="status-title">Не получилось загрузить таблицу</p>
+      <p class="status-text mono">${esc(err && err.message || "неизвестная ошибка")}</p>
+      <p class="status-hint">Проверь ID таблицы в CONFIG и что доступ открыт «Всем, у кого есть ссылка» с ролью «Читатель».</p>
+      <div class="status-actions">
+        <button class="btn-line" id="retryBtn">Повторить</button>
+        <button class="btn-line btn-line--acid" id="demoBtn">Показать демо</button>
+      </div>`;
+    $("retryBtn").addEventListener("click", ()=>loadTracks());
+    $("demoBtn").addEventListener("click", ()=>loadTracks(true));
+  }
+}
+
+async function loadTracks(forceDemo = false){
+  renderStatus("loading");
+  try{
+    if (!CONFIG.SHEET_ID || forceDemo){ state.demo = true; renderAll(DEMO_TRACKS); return; }
+    state.demo = false;
+    const tracks = await fetchSheet();
+    if (!tracks.length){ renderStatus("empty"); return; }
+    renderAll(tracks);
+  }catch(err){
+    console.error(err);
+    renderStatus("error", err);
+  }
+}
+
+/* ── Генеративная обложка: уникальная волна из названия трека ──────── */
+function drawCoverWave(cv, seed){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const size = cv.clientWidth || 320;
+  cv.width = size * dpr; cv.height = size * dpr;
+  const c = cv.getContext("2d");
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.fillStyle = "#131315"; c.fillRect(0,0,size,size);
+  const rnd = mulberry32(hash(seed));
+  [
+    {amp:size*.10, k:.020+rnd()*.012, ph:rnd()*6.28, col:"rgba(213,245,39,.95)", lw:1.8, yc:.5+(rnd()-.5)*.16},
+    {amp:size*.06, k:.030+rnd()*.014, ph:rnd()*6.28, col:"rgba(244,243,238,.30)", lw:1,   yc:.5+(rnd()-.5)*.24},
+    {amp:size*.14, k:.008+rnd()*.006, ph:rnd()*6.28, col:"rgba(213,245,39,.28)", lw:1,   yc:.5+(rnd()-.5)*.20}
+  ].forEach(L=>{
+    c.strokeStyle = L.col; c.lineWidth = L.lw; c.beginPath();
+    for (let x=0; x<=size; x+=2){
+      const y = size*L.yc + Math.sin(x*L.k+L.ph)*L.amp + Math.sin(x*L.k*2.7+L.ph*1.6)*L.amp*.35;
+      x===0 ? c.moveTo(x,y) : c.lineTo(x,y);
+    }
+    c.stroke();
+  });
+  c.fillStyle = "rgba(244,243,238,.35)";
+  c.font = '500 10px "JetBrains Mono", monospace';
+  c.fillText("WV·" + (hash(seed) % 97), size - 54, size - 14);
+}
+
+/* ── Живая волна в hero (canvas) + синтезированный звук по клику ───── */
+let actx = null;
+function playPing(){
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const t0 = actx.currentTime;
+    const scale = [220, 261.63, 329.63, 392, 440, 523.25];
+    const f = scale[Math.floor(Math.random() * scale.length)];
+    const master = actx.createGain(); master.gain.value = .5; master.connect(actx.destination);
+    [[f,.18],[f*1.5,.08],[f*2,.05]].forEach(([fr,vol])=>{
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = fr;
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(vol, t0 + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, t0 + 1.6);
+      o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + 1.7);
+    });
+  }catch(e){ /* аудио — необязательный бонус */ }
+}
+
+function initWave(){
+  const zone = $("waveZone"), cv = $("waveCanvas"), ctx = cv.getContext("2d");
+  const ACID = "#d5f527";
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let w=0, h=0, tx=-1, mx=-1, mAmt=0, pulses=[];
+
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = zone.clientWidth; h = zone.clientHeight;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if (reduced) drawStatic();
+  }
+  function yAt(x, t, boost){
+    let amp = 9 + 30*boost*mAmt*Math.exp(-((x-mx)**2)/(2*110*110));
+    for (const p of pulses){
+      const age = (t-p.t)/1000, r = age*300;
+      amp += 34*Math.exp(-((Math.abs(x-p.x)-r)**2)/(2*50*50))*Math.exp(-age*1.5);
+    }
+    return h*.55
+      + Math.sin(x*.011 + t*.0011)*amp*.55
+      + Math.sin(x*.023 - t*.0007)*amp*.30
+      + Math.sin(x*.005 + t*.0004)*amp*.35;
+  }
+  function strokeWave(t, phase, boost, alpha, width){
+    ctx.globalAlpha = alpha; ctx.lineWidth = width; ctx.strokeStyle = ACID; ctx.beginPath();
+    for (let x=0; x<=w; x+=3){
+      const y = yAt(x+phase, t, boost);
+      x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  function drawStatic(){ ctx.clearRect(0,0,w,h); mAmt = 0; strokeWave(1200, 0, 1, 1, 1.7); }
+  function frame(t){
+    ctx.clearRect(0,0,w,h);
+    mAmt += ((tx>=0?1:0) - mAmt)*.08;
+    if (tx>=0) mx += (tx-mx)*.14;
+    pulses = pulses.filter(p => (t-p.t) < 2200);
+    strokeWave(t, 0, 1, 1, 1.7);      // основная линия
+    strokeWave(t, 60, .6, .18, 1);    // «эхо»
+    requestAnimationFrame(frame);
+  }
+  function ping(x){ pulses.push({x, t:performance.now()}); playPing(); }
+
+  zone.addEventListener("pointermove", e=>{ tx = e.clientX - zone.getBoundingClientRect().left; });
+  zone.addEventListener("pointerleave", ()=>{ tx = -1; });
+  zone.addEventListener("pointerdown", e=>{ ping(e.clientX - zone.getBoundingClientRect().left); });
+  zone.addEventListener("keydown", e=>{
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); ping(w/2); }
+  });
+  window.addEventListener("resize", resize);
+  resize();
+  if (!reduced) requestAnimationFrame(frame); else drawStatic();
+}
+
+/* ── Скролл: линия у шапки + автоподсветка активного жанра ─────────── */
+let scrollScheduled = false;
+window.addEventListener("scroll", ()=>{
+  $("siteHead").classList.toggle("scrolled", scrollY > 8);
+  if (!scrollScheduled){
+    scrollScheduled = true;
+    requestAnimationFrame(()=>{ scrollScheduled = false; updateActiveGenreOnScroll(); });
+  }
+}, {passive:true});
+
+/* ── Перерасчёт при изменении окна (отступ липких заголовков + обложки) ── */
+let rsT;
+window.addEventListener("resize", ()=>{
+  clearTimeout(rsT);
+  rsT = setTimeout(()=>{
+    updateStickyVar();
+    tracksRoot.querySelectorAll("canvas.cover-canvas").forEach(cv=>drawCoverWave(cv, cv.dataset.seed || ""));
+  }, 250);
+});
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(updateStickyVar);
+
+/* ── Старт ─────────────────────────────────────────────────────────── */
+applyConfig();
+initWave();
+loadTracks();
+</script>
+</body>
+</html>
